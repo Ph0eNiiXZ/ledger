@@ -7,7 +7,7 @@
 // The page itself uses network-first below, so most updates show up without
 // even needing a bump — but bumping is a safe belt-and-braces habit.
 
-const CACHE_NAME = 'ledger-cache-v2';
+const CACHE_NAME = 'ledger-cache-v3';
 const APP_SHELL = [
   './manifest.json',
   './icons/icon-192.png',
@@ -51,13 +51,15 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Everything else (icons, manifest, fonts): cache-first, since these rarely change.
+  // Everything else (icons, manifest, fonts, the OCR library from its CDN): cache-first, since these rarely change.
   event.respondWith(
     caches.match(req).then((cached) => {
       if (cached) return cached;
       return fetch(req)
         .then((res) => {
-          if (res && res.status === 200 && res.type === 'basic') {
+          // Cache same-origin ("basic") and opaque cross-origin responses (e.g. CDN scripts loaded
+          // without CORS) alike, so the OCR library still works offline after its first download.
+          if (res && (res.status === 200 || res.type === 'opaque')) {
             const clone = res.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
           }
