@@ -1,4 +1,4 @@
-// Ledger: service worker
+// Halo: service worker
 // Caches the app shell so it works fully offline once installed.
 // All financial data lives in IndexedDB on the device, never here, never remote.
 //
@@ -7,7 +7,7 @@
 // The page itself uses network-first below, so most updates show up without
 // even needing a bump, but bumping is a safe belt-and-braces habit.
 
-const CACHE_NAME = 'ledger-cache-v3';
+const CACHE_NAME = 'halo-cache-v13';
 const APP_SHELL = [
   './manifest.json',
   './icons/icon-192.png',

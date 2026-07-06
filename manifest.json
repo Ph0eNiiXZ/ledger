@@ -1,13 +1,13 @@
 {
-  "name": "Ledger: Private Income & Expense Tracker",
-  "short_name": "Ledger",
+  "name": "Halo: Private Money Tracker",
+  "short_name": "Halo",
   "description": "A private, on-device income and expense tracker with a full analytics dashboard. No account, no cloud, no sync. Your data never leaves your phone.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#12161B",
-  "theme_color": "#12161B",
+  "background_color": "#0C0F1E",
+  "theme_color": "#0C0F1E",
   "icons": [
     {
       "src": "icons/icon-192.png",
@@ -33,13 +33,23 @@
       "name": "New expense",
       "short_name": "Expense",
       "url": "./index.html?action=new-expense",
-      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "New income",
       "short_name": "Income",
       "url": "./index.html?action=new-income",
-      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }
