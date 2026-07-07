@@ -7,7 +7,7 @@
 // The page itself uses network-first below, so most updates show up without
 // even needing a bump, but bumping is a safe belt-and-braces habit.
 
-const CACHE_NAME = 'halo-cache-v21';
+const CACHE_NAME = 'halo-cache-v28';
 const APP_SHELL = [
   './manifest.json',
   './icons/icon-192.png',
