@@ -36,6 +36,13 @@
   --line:rgba(255,255,255,0.09);
   --line-strong:rgba(255,255,255,0.16);
   --glass-edge:rgba(255,255,255,0.22);
+  --accent:#5EEAD4;
+  --accent-dim:rgba(94,234,212,0.18);
+  --on-accent:#0A0D1A;
+  --bar-bg:rgba(12,15,30,0.78);
+  --bar-bg-soft:rgba(12,15,30,0.45);
+  --toast-bg:rgba(255,255,255,0.92);
+  --toast-ink:#0A0D1A;
   --radius:20px;
   --radius-sm:13px;
   --font-display:'Sora',ui-sans-serif,system-ui,sans-serif;
@@ -89,7 +96,7 @@ input,select{font-family:inherit;}
   flex-shrink:0;
   padding:calc(16px + var(--safe-top)) 0 14px;
   position:relative;
-  background:rgba(14,17,32,0.45);
+  background:var(--bar-bg-soft);
   backdrop-filter:blur(20px);
   -webkit-backdrop-filter:blur(20px);
 }
@@ -125,7 +132,7 @@ input,select{font-family:inherit;}
 .topbar::after{
   content:'';
   position:absolute; bottom:0; left:0; right:0; height:1px;
-  background:linear-gradient(90deg, transparent, var(--green-dim) 20%, var(--glass-edge) 50%, var(--green-dim) 80%, transparent);
+  background:linear-gradient(90deg, transparent, var(--accent-dim) 20%, var(--glass-edge) 50%, var(--accent-dim) 80%, transparent);
 }
 .topbar .eyebrow{
   font-family:var(--font-body);
@@ -141,10 +148,10 @@ input,select{font-family:inherit;}
 .eyebrow-ring{
   display:inline-block;
   width:9px; height:9px;
-  border:2px solid var(--green);
+  border:2px solid var(--accent);
   border-radius:50%;
   flex-shrink:0;
-  box-shadow:0 0 6px var(--green-dim), 0 0 12px var(--green-dim);
+  box-shadow:0 0 6px var(--accent-dim), 0 0 12px var(--accent-dim);
 }
 #eyebrow-text{
   display:inline-block;
@@ -166,14 +173,14 @@ input,select{font-family:inherit;}
   stroke-linecap:round; stroke-linejoin:round;
 }
 .halo-wordmark .wm-ring{
-  stroke:var(--green); stroke-width:7.5; fill:none;
-  filter:drop-shadow(0 0 5px var(--green-dim)) drop-shadow(0 0 12px var(--green-dim));
+  stroke:var(--accent); stroke-width:7.5; fill:none;
+  filter:drop-shadow(0 0 5px var(--accent-dim)) drop-shadow(0 0 12px var(--accent-dim));
   animation:halo-breathe 3.8s ease-in-out infinite alternate;
   transform-origin:center;
 }
 @keyframes halo-breathe{
-  from{ filter:drop-shadow(0 0 4px var(--green-dim)) drop-shadow(0 0 9px var(--green-dim)); }
-  to{ filter:drop-shadow(0 0 7px var(--green-dim)) drop-shadow(0 0 18px var(--green-dim)); }
+  from{ filter:drop-shadow(0 0 4px var(--accent-dim)) drop-shadow(0 0 9px var(--accent-dim)); }
+  to{ filter:drop-shadow(0 0 7px var(--accent-dim)) drop-shadow(0 0 18px var(--accent-dim)); }
 }
 .halo-mark{
   width:34px;height:34px;
@@ -219,7 +226,7 @@ input,select{font-family:inherit;}
   width:100%;
   display:flex;
   align-items:center;
-  background:rgba(14,17,32,0.78);
+  background:var(--bar-bg);
   backdrop-filter:blur(30px);
   -webkit-backdrop-filter:blur(30px);
   border-top:none;
@@ -230,7 +237,7 @@ input,select{font-family:inherit;}
 .tabbar::before{
   content:'';
   position:absolute; top:0; left:0; right:0; height:1px;
-  background:linear-gradient(90deg, transparent, var(--green-dim) 20%, var(--glass-edge) 50%, var(--green-dim) 80%, transparent);
+  background:linear-gradient(90deg, transparent, var(--accent-dim) 20%, var(--glass-edge) 50%, var(--accent-dim) 80%, transparent);
 }
 .tab-btn{
   flex:1;
@@ -249,11 +256,11 @@ input,select{font-family:inherit;}
 .tab-btn svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.7; transition:transform 240ms cubic-bezier(.34,1.56,.64,1);}
 .tab-btn span{font-size:10px;font-family:var(--font-mono);letter-spacing:0.05em; font-weight:500;}
 .tab-btn.active{
-  color:var(--green);
-  background:var(--green-dim);
-  box-shadow:inset 0 1px 0 var(--glass-edge), 0 0 18px var(--green-dim);
+  color:var(--accent);
+  background:var(--accent-dim);
+  box-shadow:inset 0 1px 0 var(--glass-edge), 0 0 18px var(--accent-dim);
 }
-.tab-btn.active svg{stroke:var(--green); transform:translateY(-1px) scale(1.1); filter:drop-shadow(0 0 7px var(--green-dim));}
+.tab-btn.active svg{stroke:var(--accent); transform:translateY(-1px) scale(1.1); filter:drop-shadow(0 0 7px var(--accent-dim));}
 .tab-btn:active svg{transform:scale(0.86);}
 
 .fab-slot{
@@ -266,14 +273,14 @@ input,select{font-family:inherit;}
 .fab{
   width:46px;height:46px;
   border-radius:50%;
-  background:linear-gradient(135deg, var(--green), color-mix(in srgb, var(--green) 55%, var(--glow-2) 100%));
-  color:#0A0D1A;
+  background:linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 55%, var(--glow-2) 100%));
+  color:var(--on-accent);
   border:none;
   font-family:var(--font-display);
   font-size:24px;
   font-weight:600;
   display:flex;align-items:center;justify-content:center;
-  box-shadow:0 4px 14px rgba(0,0,0,0.35), 0 0 16px var(--green-dim);
+  box-shadow:0 4px 14px rgba(0,0,0,0.35), 0 0 16px var(--accent-dim);
   cursor:pointer;
   transition:transform 160ms cubic-bezier(.34,1.56,.64,1);
 }
@@ -474,7 +481,7 @@ input,select{font-family:inherit;}
   transition:transform 140ms cubic-bezier(.34,1.56,.64,1), background 160ms ease, color 160ms ease;
 }
 .chip:active{transform:scale(0.94);}
-.chip.active{background:var(--green); color:#0A0D1A; border-color:transparent; font-weight:600; box-shadow:0 4px 14px var(--green-dim);}
+.chip.active{background:var(--accent); color:var(--on-accent); border-color:transparent; font-weight:600; box-shadow:0 4px 14px var(--accent-dim);}
 
 .search-box{
   display:flex; align-items:center; gap:8px;
@@ -580,9 +587,9 @@ select.field option, .select-native option{ background:var(--bg); color:var(--in
 }
 .btn:active{transform:scale(0.97);}
 .btn.primary{
-  background:linear-gradient(135deg, var(--green), color-mix(in srgb, var(--green) 60%, var(--glow-2) 100%));
-  color:#0A0D1A; border-color:transparent;
-  box-shadow:0 6px 20px var(--green-dim);
+  background:linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 60%, var(--glow-2) 100%));
+  color:var(--on-accent); border-color:transparent;
+  box-shadow:0 6px 20px var(--accent-dim);
 }
 .btn.danger{border-color:var(--red); color:var(--red); background:none;}
 .btn + .btn{margin-top:10px;}
@@ -748,7 +755,7 @@ select.field option, .select-native option{ background:var(--bg); color:var(--in
 #tutorial-root:not(:empty){ pointer-events:auto; }
 .tut-dim{ position:fixed; inset:0; background:rgba(8,10,13,0.82); }
 .tut-highlight{
-  position:fixed; border-radius:12px; border:2px solid var(--green);
+  position:fixed; border-radius:12px; border:2px solid var(--accent);
   box-shadow:0 0 0 9999px rgba(8,10,13,0.82);
   transition:all 220ms ease;
 }
@@ -803,7 +810,7 @@ select.field option, .select-native option{ background:var(--bg); color:var(--in
   outline:none;
   transition:border-color 160ms ease, box-shadow 160ms ease;
 }
-.field:focus{border-color:var(--green); box-shadow:0 0 0 3px var(--green-dim);}
+.field:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-dim);}
 .amount-field{
   display:flex; align-items:center; gap:8px;
   background:var(--surface); border:1px solid var(--line-strong); border-radius:var(--radius-sm);
@@ -844,7 +851,7 @@ select.field option, .select-native option{ background:var(--bg); color:var(--in
 .toast{
   position:fixed; left:50%; transform:translateX(-50%);
   bottom:calc(112px + var(--safe-bottom));
-  background:rgba(255,255,255,0.92); color:#0A0D1A;
+  background:var(--toast-bg); color:var(--toast-ink);
   backdrop-filter:blur(10px);
   font-size:13px; font-weight:600;
   padding:10px 18px; border-radius:30px;
@@ -920,7 +927,7 @@ select.field option, .select-native option{ background:var(--bg); color:var(--in
    ========================================================================= */
 
 /* ---------- tiny IndexedDB wrapper ---------- */
-const APP_BUILD = 31; // keep in sync with CACHE_NAME in service-worker.js
+const APP_BUILD = 32; // keep in sync with CACHE_NAME in service-worker.js
 const DB_NAME = 'ledgerDB';
 const DB_VERSION = 5;
 let dbPromise = null;
@@ -1031,29 +1038,55 @@ const DEFAULT_ACCOUNTS = [
 
 /* ---------- palettes (recolors only: layout, fonts, and structure stay identical) ---------- */
 const THEMES = {
+  /* ---- dark ---- */
   aurora:{
-    label:'Aurora', bg:'#0C0F1E',
+    label:'Aurora', mode:'dark', bg:'#0C0F1E',
     glow1:'rgba(94,234,212,0.16)', glow2:'rgba(139,92,246,0.14)',
     ink:'#EDF0FA', inkDim:'#A2AAC4', inkFaint:'#6C7590',
-    green:'#5EEAD4', red:'#F87171', amber:'#FBBF24'
+    accent:'#5EEAD4', green:'#5EEAD4', red:'#F87171', amber:'#FBBF24'
   },
-  nebula:{
-    label:'Nebula', bg:'#140D22',
-    glow1:'rgba(232,121,249,0.15)', glow2:'rgba(96,165,250,0.13)',
-    ink:'#F3EDFA', inkDim:'#B4A6CC', inkFaint:'#7E7099',
-    green:'#6EE7B7', red:'#FB7185', amber:'#FCD34D'
+  nocturne:{
+    label:'Nocturne', mode:'dark', bg:'#110D20',
+    glow1:'rgba(167,139,250,0.16)', glow2:'rgba(244,114,182,0.12)',
+    ink:'#F0EDFA', inkDim:'#ACA3C7', inkFaint:'#756C94',
+    accent:'#A78BFA', green:'#34D399', red:'#FB7185', amber:'#FBBF24'
   },
-  ocean:{
-    label:'Ocean', bg:'#081420',
-    glow1:'rgba(56,189,248,0.16)', glow2:'rgba(45,212,191,0.13)',
-    ink:'#EAF4FA', inkDim:'#9DB8CC', inkFaint:'#648299',
-    green:'#4ADE80', red:'#F87171', amber:'#FBBF24'
+  abyss:{
+    label:'Abyss', mode:'dark', bg:'#06131F',
+    glow1:'rgba(56,189,248,0.16)', glow2:'rgba(45,212,191,0.12)',
+    ink:'#E9F3FA', inkDim:'#9BB6CA', inkFaint:'#627F95',
+    accent:'#38BDF8', green:'#34D399', red:'#F87171', amber:'#FBBF24'
   },
-  ember:{
-    label:'Ember', bg:'#170D0F',
-    glow1:'rgba(251,146,60,0.15)', glow2:'rgba(244,63,94,0.12)',
-    ink:'#FAF0ED', inkDim:'#CCADA4', inkFaint:'#99756C',
-    green:'#5EEAD4', red:'#FB7185', amber:'#FBBF24'
+  onyx:{
+    label:'Onyx', mode:'dark', bg:'#141313',
+    glow1:'rgba(229,195,106,0.13)', glow2:'rgba(148,163,184,0.10)',
+    ink:'#F2F0EC', inkDim:'#B5B0A6', inkFaint:'#7E7A72',
+    accent:'#E5C36A', green:'#4ADE80', red:'#F87171', amber:'#FBBF24'
+  },
+  /* ---- light ---- */
+  daybreak:{
+    label:'Daybreak', mode:'light', bg:'#F2F6FA',
+    glow1:'rgba(13,148,136,0.14)', glow2:'rgba(139,92,246,0.10)',
+    ink:'#16202E', inkDim:'#4A5568', inkFaint:'#7A8699',
+    accent:'#0D9488', green:'#15803D', red:'#DC2626', amber:'#B45309'
+  },
+  paper:{
+    label:'Paper', mode:'light', bg:'#F8F4ED',
+    glow1:'rgba(194,65,12,0.10)', glow2:'rgba(217,119,6,0.08)',
+    ink:'#241E16', inkDim:'#5C5344', inkFaint:'#8A8071',
+    accent:'#C2410C', green:'#15803D', red:'#DC2626', amber:'#B45309'
+  },
+  meadow:{
+    label:'Meadow', mode:'light', bg:'#F1F6F0',
+    glow1:'rgba(63,125,88,0.13)', glow2:'rgba(202,138,4,0.07)',
+    ink:'#1A241C', inkDim:'#4C5C50', inkFaint:'#79877C',
+    accent:'#3F7D58', green:'#166534', red:'#DC2626', amber:'#B45309'
+  },
+  lilac:{
+    label:'Lilac', mode:'light', bg:'#F5F2FA',
+    glow1:'rgba(124,58,237,0.10)', glow2:'rgba(219,39,119,0.07)',
+    ink:'#1F1A2E', inkDim:'#544A6B', inkFaint:'#82789B',
+    accent:'#7C3AED', green:'#15803D', red:'#DC2626', amber:'#B45309'
   },
 };
 function hexToRgba(hex, alpha){
@@ -1063,29 +1096,38 @@ function hexToRgba(hex, alpha){
 }
 function applyTheme(key){
   const t = THEMES[key] || THEMES.aurora;
+  const dark = t.mode !== 'light';
   const root = document.documentElement.style;
   root.setProperty('--bg', t.bg);
   root.setProperty('--glow-1', t.glow1);
   root.setProperty('--glow-2', t.glow2);
-  root.setProperty('--surface', 'rgba(255,255,255,0.055)');
-  root.setProperty('--surface-2', hexToRgba(t.bg, 0.96));
-  root.setProperty('--surface-3', 'rgba(255,255,255,0.12)');
+  root.setProperty('--surface', dark ? 'rgba(255,255,255,0.055)' : 'rgba(255,255,255,0.66)');
+  root.setProperty('--surface-2', hexToRgba(dark ? t.bg : '#FFFFFF', 0.96));
+  root.setProperty('--surface-3', dark ? 'rgba(255,255,255,0.12)' : 'rgba(17,24,39,0.07)');
   root.setProperty('--paper', t.ink);
   root.setProperty('--ink', t.ink);
   root.setProperty('--ink-dim', t.inkDim);
   root.setProperty('--ink-faint', t.inkFaint);
+  root.setProperty('--accent', t.accent);
+  root.setProperty('--accent-dim', hexToRgba(t.accent, dark ? 0.18 : 0.14));
+  root.setProperty('--on-accent', dark ? '#0A0D1A' : '#FFFFFF');
   root.setProperty('--green', t.green);
-  root.setProperty('--green-dim', hexToRgba(t.green,0.16));
+  root.setProperty('--green-dim', hexToRgba(t.green, dark ? 0.16 : 0.13));
   root.setProperty('--red', t.red);
-  root.setProperty('--red-dim', hexToRgba(t.red,0.16));
+  root.setProperty('--red-dim', hexToRgba(t.red, dark ? 0.16 : 0.12));
   root.setProperty('--amber', t.amber);
-  root.setProperty('--amber-dim', hexToRgba(t.amber,0.14));
-  root.setProperty('--line', 'rgba(255,255,255,0.09)');
-  root.setProperty('--line-strong', 'rgba(255,255,255,0.16)');
-  root.setProperty('--glass-edge', 'rgba(255,255,255,0.22)');
+  root.setProperty('--amber-dim', hexToRgba(t.amber, dark ? 0.14 : 0.12));
+  root.setProperty('--line', dark ? 'rgba(255,255,255,0.09)' : 'rgba(17,24,39,0.11)');
+  root.setProperty('--line-strong', dark ? 'rgba(255,255,255,0.16)' : 'rgba(17,24,39,0.19)');
+  root.setProperty('--glass-edge', dark ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.95)');
+  root.setProperty('--bar-bg', hexToRgba(t.bg, dark ? 0.78 : 0.86));
+  root.setProperty('--bar-bg-soft', hexToRgba(t.bg, dark ? 0.45 : 0.66));
+  root.setProperty('--toast-bg', dark ? 'rgba(255,255,255,0.92)' : 'rgba(17,24,39,0.94)');
+  root.setProperty('--toast-ink', dark ? '#0A0D1A' : '#F8FAFC');
   const metaTheme = document.querySelector('meta[name="theme-color"]');
   if(metaTheme) metaTheme.setAttribute('content', t.bg);
   state.theme = key;
+  state.themeMode = t.mode;
 }
 
 async function ensureSeed(){
@@ -1095,8 +1137,10 @@ async function ensureSeed(){
   }
   const curMeta = await dbGet('meta','currency');
   if(!curMeta){ await dbPut('meta', {key:'currency', value:'THB'}); }
-  const themeMeta = await dbGet('meta','theme');
-  if(!themeMeta){ await dbPut('meta', {key:'theme', value:'aurora'}); }
+  const td = await dbGet('meta','themeDark');
+  if(!td){ await dbPut('meta', {key:'themeDark', value:'aurora'}); }
+  const tl = await dbGet('meta','themeLight');
+  if(!tl){ await dbPut('meta', {key:'themeLight', value:'daybreak'}); }
   const accts = await dbGetAll('accounts');
   if(accts.length === 0){
     for(const a of DEFAULT_ACCOUNTS){ await dbAdd('accounts', a); }
@@ -1128,6 +1172,7 @@ const state = {
   pendingRecurring: [],
   boardSelectedId: null,
   theme: 'aurora',
+  themeMode: 'dark',
 };
 
 /* ---------- date / format helpers ---------- */
@@ -1621,17 +1666,34 @@ async function fetchFxRate(fromCode, toCode){
   }
 }
 async function loadTheme(){
-  const m = await dbGet('meta','theme');
-  // Migrate palette keys from the previous design system
-  const migrate = { ledger:'aurora', midnight:'ocean', botanical:'aurora', plum:'nebula' };
-  let key = m ? m.value : 'aurora';
-  if(migrate[key]) key = migrate[key];
-  if(!THEMES[key]) key = 'aurora';
+  // Migrate any legacy single-theme selection into the dark slot
+  const legacy = await dbGet('meta','theme');
+  if(legacy){
+    const migrate = { ledger:'aurora', midnight:'abyss', botanical:'aurora', plum:'nocturne', nebula:'nocturne', ocean:'abyss', ember:'onyx' };
+    const mapped = migrate[legacy.value] || (THEMES[legacy.value] && THEMES[legacy.value].mode==='dark' ? legacy.value : null);
+    if(mapped){ await dbPut('meta', {key:'themeDark', value:mapped}); }
+    await dbDelete('meta','theme');
+  }
+  const modeMeta = await dbGet('meta','themeMode');
+  const systemLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+  const mode = modeMeta ? modeMeta.value : (systemLight ? 'light' : 'dark');
+  const selMeta = await dbGet('meta', mode==='dark' ? 'themeDark' : 'themeLight');
+  let key = selMeta ? selMeta.value : (mode==='dark' ? 'aurora' : 'daybreak');
+  if(!THEMES[key] || THEMES[key].mode !== mode) key = mode==='dark' ? 'aurora' : 'daybreak';
   applyTheme(key);
   return key;
 }
 async function setThemePref(key){
-  await dbPut('meta', {key:'theme', value:key});
+  const t = THEMES[key];
+  if(!t) return;
+  await dbPut('meta', {key: t.mode==='dark' ? 'themeDark' : 'themeLight', value:key});
+  applyTheme(key);
+}
+async function setThemeMode(mode){
+  await dbPut('meta', {key:'themeMode', value:mode}); // manual choice, stops following the system setting
+  const selMeta = await dbGet('meta', mode==='dark' ? 'themeDark' : 'themeLight');
+  let key = selMeta ? selMeta.value : (mode==='dark' ? 'aurora' : 'daybreak');
+  if(!THEMES[key] || THEMES[key].mode !== mode) key = mode==='dark' ? 'aurora' : 'daybreak';
   applyTheme(key);
 }
 
@@ -2793,12 +2855,16 @@ async function renderSettings(){
 
     <div class="section-label">Palette</div>
     <div class="card" style="margin-bottom:18px;">
+      <div class="segmented" style="margin-bottom:14px;">
+        <button type="button" class="seg-btn ${state.themeMode==='dark'?'active':''}" data-thememode="dark">Dark</button>
+        <button type="button" class="seg-btn ${state.themeMode==='light'?'active':''}" data-thememode="light">Light</button>
+      </div>
       <div class="theme-grid">
-        ${Object.entries(THEMES).map(([key,t]) => `
+        ${Object.entries(THEMES).filter(([k,t])=>t.mode===state.themeMode).map(([key,t]) => `
           <button type="button" class="theme-card ${state.theme===key?'active':''}" data-theme="${key}">
             <div class="theme-swatches">
-              <span style="background:${t.bg}"></span>
-              <span style="background:${t.glow1}; backdrop-filter:none;"></span>
+              <span style="background:${t.bg}; border:1px solid var(--line);"></span>
+              <span style="background:${t.accent}"></span>
               <span style="background:${t.green}"></span>
               <span style="background:${t.red}"></span>
               <span style="background:${t.amber}"></span>
@@ -2807,6 +2873,7 @@ async function renderSettings(){
           </button>
         `).join('')}
       </div>
+      <div style="font-size:11px; color:var(--ink-faint); margin-top:10px; line-height:1.5;">The second swatch is each palette's accent: it colors the Halo ring, buttons, and highlights.</div>
     </div>
 
     <div class="section-label">Currency</div>
@@ -3914,7 +3981,7 @@ async function openBulkImportModal(){
   async function processFiles(files){
     const existingTxns = await getAllTransactions();
     stage.innerHTML = `<div style="font-size:13px; color:var(--ink-dim); margin-bottom:10px;" id="bulk-status">Starting…</div>
-      <div class="bar-track" style="margin-bottom:16px;"><div class="bar-fill" id="bulk-bar" style="width:0%; background:var(--green);"></div></div>`;
+      <div class="bar-track" style="margin-bottom:16px;"><div class="bar-fill" id="bulk-bar" style="width:0%; background:var(--accent);"></div></div>`;
     const statusEl = stage.querySelector('#bulk-status');
     const barEl = stage.querySelector('#bulk-bar');
 
@@ -4278,6 +4345,9 @@ function attachViewHandlers(){
       openPinSetupModal(!!hash);
     });
 
+    viewRoot.querySelectorAll('[data-thememode]').forEach(el => {
+      el.addEventListener('click', async () => { await setThemeMode(el.dataset.thememode); renderView(); });
+    });
     viewRoot.querySelectorAll('[data-theme]').forEach(el => {
       el.addEventListener('click', async () => { await setThemePref(el.dataset.theme); renderView(); });
     });
@@ -4382,6 +4452,12 @@ document.getElementById('fab-add').addEventListener('click', () => {
   await refreshAccounts();
   await loadCurrency();
   await loadTheme();
+  if(window.matchMedia){
+    window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', async () => {
+      const manual = await dbGet('meta','themeMode');
+      if(!manual){ await loadTheme(); renderView(); }
+    });
+  }
   await processRecurring();
   await recordNetWorthSnapshot();
 
