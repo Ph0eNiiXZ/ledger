@@ -920,6 +920,7 @@ select.field option, .select-native option{ background:var(--bg); color:var(--in
    ========================================================================= */
 
 /* ---------- tiny IndexedDB wrapper ---------- */
+const APP_BUILD = 31; // keep in sync with CACHE_NAME in service-worker.js
 const DB_NAME = 'ledgerDB';
 const DB_VERSION = 5;
 let dbPromise = null;
@@ -2781,6 +2782,7 @@ async function renderSettings(){
     <div class="section-label">Help</div>
     <div class="card" style="margin-bottom:18px;">
       <button class="btn" id="replay-tutorial-btn">Replay tutorial</button>
+      <div style="font-family:var(--font-mono); font-size:10.5px; color:var(--ink-faint); margin-top:10px; text-align:center;">Halo build ${APP_BUILD}</div>
     </div>
 
     <div class="section-label">Privacy &amp; lock</div>
