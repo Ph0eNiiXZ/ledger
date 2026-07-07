@@ -927,7 +927,7 @@ select.field option, .select-native option{ background:var(--bg); color:var(--in
    ========================================================================= */
 
 /* ---------- tiny IndexedDB wrapper ---------- */
-const APP_BUILD = 32; // keep in sync with CACHE_NAME in service-worker.js
+const APP_BUILD = 33; // keep in sync with CACHE_NAME in service-worker.js
 const DB_NAME = 'ledgerDB';
 const DB_VERSION = 5;
 let dbPromise = null;
@@ -3813,16 +3813,22 @@ function parseSlipText(text){
   }
   result.amount = bestKeyword !== null ? bestKeyword : best;
 
-  // Date: Thai month abbreviation first, then numeric DD/MM/YY(YY) as a fallback.
-  const monthAlt = Object.keys(THAI_MONTHS).map(k=>k.replace('.','\\.')).join('|');
-  const thaiMonthPattern = new RegExp('([0-3]?\\d)\\s*(' + monthAlt + ')\\s*(\\d{2,4})','i');
-  const tm = text.match(thaiMonthPattern);
-  if(tm){
-    const day = parseInt(tm[1],10);
-    const monKey = Object.keys(THAI_MONTHS).find(k => k.toLowerCase() === tm[2].toLowerCase());
-    const month = monKey ? THAI_MONTHS[monKey] : null;
-    const year = normalizeThaiYear(parseInt(tm[3],10));
-    if(month && day && year) result.date = isoDateFrom(year, month, day);
+  // Date: Thai month abbreviations matched tolerantly. OCR often drops the dots
+  // or inserts spaces ("ก.ค." becomes "ก ค" or "กค"), so each month is matched
+  // character by character with dots and whitespace optional between letters.
+  const THAI_MONTH_LETTERS = [
+    ['มค',1],['กพ',2],['มีค',3],['เมย',4],['พค',5],['มิย',6],
+    ['กค',7],['สค',8],['กย',9],['ตค',10],['พย',11],['ธค',12],
+  ];
+  for(const [letters, month] of THAI_MONTH_LETTERS){
+    const tolerant = letters.split('').map(ch => ch + '[.\\s]*').join('');
+    const re = new RegExp('([0-3]?\\d)\\s*' + tolerant + '(\\d{2,4})');
+    const tm = text.match(re);
+    if(tm){
+      const day = parseInt(tm[1],10);
+      const year = normalizeThaiYear(parseInt(tm[2],10));
+      if(day>=1 && day<=31 && year){ result.date = isoDateFrom(year, month, day); break; }
+    }
   }
   if(!result.date){
     const nm = text.match(/([0-3]?\d)[\/\-.]([01]?\d)[\/\-.](\d{2,4})/);
@@ -3834,12 +3840,30 @@ function parseSlipText(text){
   }
 
   // Recipient / note: text following common "to / account name" labels.
-  const noteKeywordRegex = /(ไปยัง|ชื่อบัญชี|โอนเงินไปยัง|โอนให้|received by|to account|account name|payee)/i;
+  const noteKeywordRegex = /(ไปยัง|ชื่อบัญชี|โอนเงินไปยัง|โอนให้|ผู้รับเงิน|ผู้รับ|บัญชีผู้รับ|received by|to account|account name|recipient|payee)/i;
   for(let i=0;i<lines.length;i++){
     if(noteKeywordRegex.test(lines[i])){
       let rest = lines[i].replace(noteKeywordRegex,'').replace(/^[:\-\s]+/,'').trim();
       if(!rest && lines[i+1]) rest = lines[i+1].trim();
       if(rest){ result.note = rest.slice(0,40); break; }
+    }
+  }
+  // Fallback: modern slips often show no label, just a name near a masked
+  // account number like x-1234 or xxx-x-x1234-x. Take the nearest name-looking
+  // line above the mask.
+  if(!result.note){
+    const maskRegex = /x{1,}[\sx\d-]*\d{2,}|\d{2,}[\sx\d-]*x{2,}/i;
+    for(let i=0;i<lines.length;i++){
+      if(maskRegex.test(lines[i])){
+        for(let j=i; j>=Math.max(0,i-2); j--){
+          const cleaned = lines[j].replace(maskRegex,'').trim();
+          if(cleaned.length >= 3 && !/([0-9]{2,}|จำนวน|amount|บาท|thb|fee|ค่าธรรมเนียม)/i.test(cleaned)){
+            result.note = cleaned.slice(0,40);
+            break;
+          }
+        }
+        if(result.note) break;
+      }
     }
   }
 
@@ -3849,6 +3873,16 @@ function parseSlipText(text){
     if(re.test(haystack) && catByName(catName)){ result.categoryGuess = catName; break; }
   }
   return result;
+}
+
+async function suggestCategoryFromHistory(note, type){
+  if(!note || note.trim().length < 3) return null;
+  const q = note.trim().toLowerCase();
+  const all = await getAllTransactions();
+  const candidates = all.filter(t => t.type === (type||'expense') && t.note && t.note.trim().length >= 3 &&
+    (t.note.trim().toLowerCase().includes(q) || q.includes(t.note.trim().toLowerCase())));
+  candidates.sort((a,b) => b.date.localeCompare(a.date));
+  return candidates.length ? candidates[0].category : null;
 }
 
 async function recognizeSlip(file, onProgress){
@@ -3879,6 +3913,9 @@ async function handleSlipScan(file, ov){
     if(parsed.amount) ov.querySelector('#txn-amount').value = parsed.amount.toFixed(2);
     if(parsed.date) ov.querySelector('#txn-date').value = parsed.date;
     if(parsed.note) ov.querySelector('#txn-note').value = parsed.note;
+    if(!parsed.categoryGuess && parsed.note){
+      parsed.categoryGuess = await suggestCategoryFromHistory(parsed.note, 'expense');
+    }
     if(parsed.categoryGuess){
       const chip = ov.querySelector(`.cat-chip[data-cat="${CSS.escape(parsed.categoryGuess)}"]`);
       if(chip) chip.click();
@@ -3993,12 +4030,14 @@ async function openBulkImportModal(){
       catch(err){ parsed = {}; }
       let receiptData = null;
       try{ receiptData = await resizeImageFile(file, 1000, 0.55); }catch(err){}
+      let catGuess = parsed.categoryGuess || null;
+      if(!catGuess && parsed.note){ catGuess = await suggestCategoryFromHistory(parsed.note, 'expense'); }
       const cand = {
         fileName: file.name || ('#' + (i+1)),
         amount: parsed.amount || null,
         date: parsed.date || null,
         note: parsed.note || '',
-        categoryGuess: parsed.categoryGuess || null,
+        categoryGuess: catGuess,
         receiptData,
         resolved:false,
         dup:false,
