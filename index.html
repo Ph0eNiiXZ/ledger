@@ -927,7 +927,7 @@ select.field option, .select-native option{ background:var(--bg); color:var(--in
    ========================================================================= */
 
 /* ---------- tiny IndexedDB wrapper ---------- */
-const APP_BUILD = 34; // keep in sync with CACHE_NAME in service-worker.js
+const APP_BUILD = 35; // keep in sync with CACHE_NAME in service-worker.js
 const DB_NAME = 'ledgerDB';
 const DB_VERSION = 5;
 let dbPromise = null;
@@ -1477,6 +1477,7 @@ const TUTORIAL_STEPS = [
 let tutorialState = null;
 
 async function startTutorial(){
+  armBack();
   tutorialState = { stepIndex: 0 };
   viewRoot.style.overflowY = 'hidden'; // stop the page scrolling underneath the spotlight
   window.addEventListener('resize', tutorialOnResize);
@@ -1807,6 +1808,7 @@ async function eyebrowContextFor(tab){
 
 async function renderView(){
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === state.tab));
+  if(state.tab !== 'dashboard') armBack();
   const meta = TAB_META[state.tab];
   topbarEyebrow.innerHTML = '<span class="eyebrow-ring" aria-hidden="true"></span><span id="eyebrow-text"></span>';
   if(state.tab === 'dashboard'){
@@ -2957,6 +2959,32 @@ async function renderSettings(){
 /* ---------- MODALS ---------- */
 const modalRoot = document.getElementById('modal-root');
 
+/* ---------- hardware / browser back button ----------
+   One sentinel history entry is kept while anything is "open" (a sheet, the
+   receipt viewer, the tutorial) or the user is off the Dashboard. Pressing
+   back consumes the sentinel, we handle it in-app, and re-arm. On the
+   Dashboard with nothing open, back exits the app like a normal Android app. */
+let backArmed = false;
+function armBack(){
+  if(!backArmed){
+    history.pushState({halo:1}, '');
+    backArmed = true;
+  }
+}
+function handleBack(){
+  const viewer = document.querySelector('.receipt-viewer');
+  if(viewer){ viewer.remove(); return true; }
+  const modalRoot = document.getElementById('modal-root');
+  if(modalRoot && modalRoot.childElementCount > 0){ closeModal(); return true; }
+  if(typeof tutorialState !== 'undefined' && tutorialState){ endTutorial(); return true; }
+  if(state.tab !== 'dashboard'){ state.tab = 'dashboard'; renderView(); return true; }
+  return false;
+}
+window.addEventListener('popstate', () => {
+  backArmed = false;
+  if(handleBack()){ armBack(); }
+});
+
 function closeModal(){
   const ov = modalRoot.querySelector('.overlay');
   if(!ov) return;
@@ -2965,6 +2993,7 @@ function closeModal(){
 }
 
 function openOverlay(innerHtml){
+  armBack();
   modalRoot.innerHTML = `<div class="overlay"><div class="sheet">${innerHtml}</div></div>`;
   const ov = modalRoot.querySelector('.overlay');
   ov.addEventListener('click', (e)=>{ if(e.target === ov) closeModal(); });
@@ -3763,6 +3792,7 @@ async function openGoalModal(editId){
 }
 
 function openReceiptViewer(dataUrl){
+  armBack();
   const el = document.createElement('div');
   el.className = 'receipt-viewer';
   el.innerHTML = `<img src="${dataUrl}" alt="Receipt">`;
@@ -3919,6 +3949,15 @@ function parseSlipText(text){
     return true;
   }
   const noteKeywordRegex = /(ไปยัง|ชื่อบัญชี|โอนเงินไปยัง|โอนให้|ผู้รับเงิน|ผู้รับ|บัญชีผู้รับ|received by|to account|account name|recipient|payee)/i;
+  // Scrub keyword tokens anywhere in the string, leading and trailing OCR junk
+  // (emoticons, stray punctuation from icons), and collapse whitespace.
+  function cleanNote(s){
+    if(!s) return s;
+    s = s.replace(new RegExp(noteKeywordRegex.source, 'gi'), ' ');
+    s = s.replace(/^[^A-Za-z0-9ก-๙]+/, '').replace(/[^A-Za-z0-9ก-๙.)]+$/, '');
+    s = s.replace(/\s{2,}/g, ' ').trim();
+    return s;
+  }
   for(let i=0;i<lines.length && !result.note;i++){
     let matched = false, rest = '';
     if(noteKeywordRegex.test(lines[i]) && !FROM_RE.test(lines[i])){
@@ -3929,8 +3968,10 @@ function parseSlipText(text){
       rest = lines[i].replace(/^to\b/i,'').replace(/^[:\-\s]+/,'').trim();
     }
     if(matched){
+      rest = cleanNote(rest);
+      const nextClean = lines[i+1] ? cleanNote(lines[i+1]) : '';
       if(rest && plausibleName(rest)){ result.note = rest.slice(0,40); }
-      else if(lines[i+1] && plausibleName(lines[i+1])){ result.note = lines[i+1].trim().slice(0,40); }
+      else if(nextClean && plausibleName(nextClean)){ result.note = nextClean.slice(0,40); }
     }
   }
   if(!result.note){
@@ -3946,7 +3987,7 @@ function parseSlipText(text){
     for(let b = blockIdx.length-1; b >= 0 && !result.note; b--){
       const last = blockIdx[b];
       for(let j=last; j>=Math.max(0,last-3); j--){
-        const cand = lines[j].replace(maskRe,'').replace(idRe,'').trim();
+        const cand = cleanNote(lines[j].replace(maskRe,'').replace(idRe,'').trim());
         if(plausibleName(cand)){ result.note = cand.slice(0,40); break; }
       }
     }
