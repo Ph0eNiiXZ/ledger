@@ -927,7 +927,7 @@ select.field option, .select-native option{ background:var(--bg); color:var(--in
    ========================================================================= */
 
 /* ---------- tiny IndexedDB wrapper ---------- */
-const APP_BUILD = 33; // keep in sync with CACHE_NAME in service-worker.js
+const APP_BUILD = 34; // keep in sync with CACHE_NAME in service-worker.js
 const DB_NAME = 'ledgerDB';
 const DB_VERSION = 5;
 let dbPromise = null;
@@ -2798,6 +2798,8 @@ async function renderSettings(){
   const recurringRules = await dbGetAll('recurring');
   const allTxns = await getAllTransactions();
   const pinHash = await getPinHash();
+  const slipModeMeta = await dbGet('meta','slipVerifyMode');
+  const slipVerifyMode = slipModeMeta ? slipModeMeta.value : 'smart';
   const lastBackupMeta = await dbGet('meta','lastBackupAt');
   const lastBackupLabel = lastBackupMeta
     ? `${Math.floor((Date.now() - new Date(lastBackupMeta.value).getTime())/86400000)} days ago`
@@ -2851,6 +2853,20 @@ async function renderSettings(){
     <div class="card" style="margin-bottom:18px;">
       <button class="btn" id="pin-setup-btn">${pinHash ? 'Change PIN' : 'Set a PIN'}</button>
       <div style="font-size:11.5px; color:var(--ink-faint); margin-top:8px;">${pinHash ? 'A PIN is required to open this app.' : 'Add a PIN so the app locks when closed.'}</div>
+    </div>
+
+    <div class="section-label">Slip scanning</div>
+    <div class="card" style="margin-bottom:18px;">
+      <div class="chip-row" style="margin-bottom:10px;">
+        <button type="button" class="chip ${slipVerifyMode==='always'?'active':''}" data-slipmode="always">VERIFY EVERY SLIP</button>
+        <button type="button" class="chip ${slipVerifyMode==='smart'?'active':''}" data-slipmode="smart">SMART</button>
+        <button type="button" class="chip ${slipVerifyMode==='auto'?'active':''}" data-slipmode="auto">FULLY AUTO</button>
+      </div>
+      <div style="font-size:11px; color:var(--ink-faint); line-height:1.5;">${
+        slipVerifyMode==='always' ? 'Every scanned slip waits for your review before anything saves.'
+        : slipVerifyMode==='auto' ? 'Any slip with a readable amount saves immediately (a missing date becomes today). Possible duplicates still wait for review.'
+        : 'Slips with a clear amount and date save themselves. Unclear reads and possible duplicates wait for review.'
+      }</div>
     </div>
 
     <div class="section-label">Palette</div>
@@ -3793,15 +3809,50 @@ const SLIP_CATEGORY_KEYWORDS = [
   [/hospital|pharmacy|clinic/i, 'Health'],
 ];
 
+// Which banking app issued this slip? The issuing app is virtually always the
+// account the money left from. Markers are app-specific to avoid matching the
+// DESTINATION bank named on transfer slips.
+const SLIP_BANKS = [
+  { key:'scb',   name:'SCB',       re:/รหัสอ้างอิง|ไทยพาณิชย์|\bscb\b/i },
+  { key:'dime',  name:'Dime',      re:/\bdime\b|kkp bank|\bdmbp/i },
+  { key:'kbank', name:'KBank',     re:/k\s?\+|\bkbank\b|kasikorn|กสิกร/i },
+  { key:'ttb',   name:'ttb',       re:/ttb touch/i },
+  { key:'ktb',   name:'Krungthai', re:/krungthai|กรุงไทย|เป๋าตัง/i },
+  { key:'bay',   name:'Krungsri',  re:/krungsri|กรุงศรี|\bkma\b/i },
+  { key:'bbl',   name:'Bangkok Bank', re:/bualuang|bangkok bank/i },
+  { key:'gsb',   name:'GSB',       re:/mymo|ออมสิน/i },
+  { key:'truemoney', name:'TrueMoney', re:/truemoney|ทรูมันนี่/i },
+];
+const ACCOUNT_BANK_ALIASES = {
+  scb:['scb','ไทยพาณิชย์','siam'],
+  kbank:['kbank','kasikorn','กสิกร','k+','kplus','k plus'],
+  dime:['dime','kkp','kiatnakin','เกียรตินาคิน','phatra'],
+  ttb:['ttb','ทีเอ็มบี','ทหารไทย'],
+  ktb:['ktb','krungthai','กรุงไทย'],
+  bay:['bay','krungsri','กรุงศรี','ayudhya'],
+  bbl:['bbl','bangkok','กรุงเทพ','bualuang'],
+  gsb:['gsb','ออมสิน','mymo'],
+  truemoney:['true','ทรู'],
+};
+function detectSlipBank(text){
+  for(const b of SLIP_BANKS){ if(b.re.test(text)) return { key:b.key, name:b.name }; }
+  return null;
+}
+function accountForBank(bankKey){
+  const aliases = ACCOUNT_BANK_ALIASES[bankKey] || [];
+  return state.accounts.find(a => aliases.some(al => a.name.toLowerCase().includes(al))) || null;
+}
+
 function parseSlipText(text){
-  const result = { amount:null, date:null, note:null, categoryGuess:null };
+  const result = { amount:null, date:null, note:null, categoryGuess:null, bank:null };
+  result.bank = detectSlipBank(text || '');
   const lines = (text||'').split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
 
   // Amount: prefer numbers on a line mentioning "amount"/"บาท"/"THB", else the largest 2-decimal number found.
   const amtRegex = /([0-9]{1,3}(?:,[0-9]{3})*\.[0-9]{2})/g;
   let best = null, bestKeyword = null;
   for(const line of lines){
-    const isKeywordLine = /(จำนวนเงิน|จำนวน|amount|บาท|thb)/i.test(line);
+    const isKeywordLine = /(จำนวนเงิน|จำนวน|amount|บาท|baht|thb)/i.test(line);
     let m;
     amtRegex.lastIndex = 0;
     while((m = amtRegex.exec(line))){
@@ -3831,6 +3882,17 @@ function parseSlipText(text){
     }
   }
   if(!result.date){
+    const em = text.match(/([0-3]?\d)\s*(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?,?\s*(\d{2,4})/i);
+    if(em){
+      const day = parseInt(em[1],10);
+      const month = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].indexOf(em[2].toLowerCase()) + 1;
+      let y = parseInt(em[3],10);
+      if(y < 100) y = 2000 + y;           // Gregorian shorthand: 26 means 2026
+      else if(y >= 2400) y = y - 543;     // Buddhist era just in case
+      if(day>=1 && day<=31 && y>=2015 && y<=2035) result.date = isoDateFrom(y, month, day);
+    }
+  }
+  if(!result.date){
     const nm = text.match(/([0-3]?\d)[\/\-.]([01]?\d)[\/\-.](\d{2,4})/);
     if(nm){
       const day = parseInt(nm[1],10), month = parseInt(nm[2],10);
@@ -3839,30 +3901,53 @@ function parseSlipText(text){
     }
   }
 
-  // Recipient / note: text following common "to / account name" labels.
+  // Recipient / note. Priority one: explicit "to" labels. Priority two: on every
+  // Thai bank layout the recipient block sits BELOW the sender block, so scan
+  // account-ID-looking lines from the bottom up and take the name above them.
+  // Sender lines (จาก / From) and bank names are never accepted as the note.
+  const BANK_WORD_RE = /(bank|ธนาคาร|kbank|kasikorn|กสิกร|scb|ไทยพาณิชย์|kiatnakin|phatra|krungsri|กรุงศรี|krungthai|กรุงไทย|bualuang|ttb|kkp|gsb|ออมสิน|powered by)/i;
+  const FROM_RE = /^(จาก|from)\b/i;
+  function bankishLine(s){ return BANK_WORD_RE.test(s) && s.length <= 26 && !/[()]/.test(s); }
+  function plausibleName(s){
+    if(!s || s.trim().length < 3) return false;
+    s = s.trim();
+    if(FROM_RE.test(s)) return false;
+    if(bankishLine(s)) return false;
+    if(/(จำนวน|amount|บาท|baht|thb|fee|ค่าธรรมเนียม|transaction|slip\s*id|รหัส|biller|ref\b|date\b|scan|verify)/i.test(s)) return false;
+    const digits = (s.match(/\d/g)||[]).length;
+    if(digits > s.length/3) return false;
+    return true;
+  }
   const noteKeywordRegex = /(ไปยัง|ชื่อบัญชี|โอนเงินไปยัง|โอนให้|ผู้รับเงิน|ผู้รับ|บัญชีผู้รับ|received by|to account|account name|recipient|payee)/i;
-  for(let i=0;i<lines.length;i++){
-    if(noteKeywordRegex.test(lines[i])){
-      let rest = lines[i].replace(noteKeywordRegex,'').replace(/^[:\-\s]+/,'').trim();
-      if(!rest && lines[i+1]) rest = lines[i+1].trim();
-      if(rest){ result.note = rest.slice(0,40); break; }
+  for(let i=0;i<lines.length && !result.note;i++){
+    let matched = false, rest = '';
+    if(noteKeywordRegex.test(lines[i]) && !FROM_RE.test(lines[i])){
+      matched = true;
+      rest = lines[i].replace(noteKeywordRegex,'').replace(/^[:\-\s]+/,'').trim();
+    } else if(/^to\b/i.test(lines[i]) && !/^to(tal|p)/i.test(lines[i])){
+      matched = true;
+      rest = lines[i].replace(/^to\b/i,'').replace(/^[:\-\s]+/,'').trim();
+    }
+    if(matched){
+      if(rest && plausibleName(rest)){ result.note = rest.slice(0,40); }
+      else if(lines[i+1] && plausibleName(lines[i+1])){ result.note = lines[i+1].trim().slice(0,40); }
     }
   }
-  // Fallback: modern slips often show no label, just a name near a masked
-  // account number like x-1234 or xxx-x-x1234-x. Take the nearest name-looking
-  // line above the mask.
   if(!result.note){
-    const maskRegex = /x{1,}[\sx\d-]*\d{2,}|\d{2,}[\sx\d-]*x{2,}/i;
+    const maskRe = /x{1,}[\sx\d-]*\d{2,}|\d{2,}[\sx\d-]*x{2,}/i;
+    const idRe = /\d[\d\s-]{9,}/;
+    const refLineRe = /slip\s*id|transaction\s*id|รหัสอ้างอิง|รหัสธุรกรรม|\bref/i;
+    const blockIdx = [];
     for(let i=0;i<lines.length;i++){
-      if(maskRegex.test(lines[i])){
-        for(let j=i; j>=Math.max(0,i-2); j--){
-          const cleaned = lines[j].replace(maskRegex,'').trim();
-          if(cleaned.length >= 3 && !/([0-9]{2,}|จำนวน|amount|บาท|thb|fee|ค่าธรรมเนียม)/i.test(cleaned)){
-            result.note = cleaned.slice(0,40);
-            break;
-          }
-        }
-        if(result.note) break;
+      if(refLineRe.test(lines[i])) continue;
+      const hasAmount = /\d\.\d{2}\b/.test(lines[i]);
+      if(!hasAmount && (maskRe.test(lines[i]) || idRe.test(lines[i]))) blockIdx.push(i);
+    }
+    for(let b = blockIdx.length-1; b >= 0 && !result.note; b--){
+      const last = blockIdx[b];
+      for(let j=last; j>=Math.max(0,last-3); j--){
+        const cand = lines[j].replace(maskRe,'').replace(idRe,'').trim();
+        if(plausibleName(cand)){ result.note = cand.slice(0,40); break; }
       }
     }
   }
@@ -3920,8 +4005,15 @@ async function handleSlipScan(file, ov){
       const chip = ov.querySelector(`.cat-chip[data-cat="${CSS.escape(parsed.categoryGuess)}"]`);
       if(chip) chip.click();
     }
+    if(parsed.bank){
+      const acct = accountForBank(parsed.bank.key);
+      if(acct){
+        const sel = ov.querySelector('#txn-account');
+        if(sel) sel.value = String(acct.id);
+      }
+    }
     statusEl.textContent = parsed.amount
-      ? 'Filled in from the slip. Check everything before saving.'
+      ? `Filled in from the${parsed.bank ? ' ' + parsed.bank.name : ''} slip. Check everything before saving.`
       : "Couldn't find an amount on that slip. Enter it manually.";
   }catch(err){
     statusEl.textContent = 'Could not read that image. Enter the details manually.';
@@ -3950,8 +4042,8 @@ async function openBulkImportModal(){
     <div class="sheet-title">Import bank slips</div>
     <div id="bulk-stage">
       <div style="font-size:13px; color:var(--ink-dim); line-height:1.55; margin-bottom:14px;">
-        Pick multiple slip photos from your gallery (tap and hold to multi-select). Halo reads each one on-device:
-        clear reads save automatically, unclear ones and possible duplicates wait for you below. Keep this sheet open while it works.
+        Pick multiple slip photos from your gallery (tap and hold to multi-select). Halo reads each one on-device.
+        How much saves automatically follows your Slip scanning setting in Setup. Keep this sheet open while it works.
       </div>
       <input type="file" accept="image/*" multiple id="bulk-files" style="display:none;">
       <button class="btn primary" id="bulk-pick">Choose slip photos</button>
@@ -3983,7 +4075,7 @@ async function openBulkImportModal(){
       </div>
       <div class="field-group" style="display:flex; gap:8px;">
         <select class="field select-native rv-cat" style="flex:1;">${expenseCats.map(cat=>`<option value="${escapeHtml(cat.name)}" ${cat.name===(item.categoryGuess||fallbackCat)?'selected':''}>${escapeHtml(cat.name)}</option>`).join('')}</select>
-        <select class="field select-native rv-acct" style="flex:1;">${state.accounts.map(a=>`<option value="${a.id}">${escapeHtml(a.name)}</option>`).join('')}</select>
+        <select class="field select-native rv-acct" style="flex:1;">${state.accounts.map(a=>`<option value="${a.id}" ${a.id===item.accountId?'selected':''}>${escapeHtml(a.name)}</option>`).join('')}</select>
       </div>
       <div style="display:flex; gap:8px;">
         <button class="btn primary rv-save" style="margin:0;">Save</button>
@@ -4017,6 +4109,9 @@ async function openBulkImportModal(){
 
   async function processFiles(files){
     const existingTxns = await getAllTransactions();
+    const vmodeMeta = await dbGet('meta','slipVerifyMode');
+    const vmode = vmodeMeta ? vmodeMeta.value : 'smart';
+    const today = ymd(new Date());
     stage.innerHTML = `<div style="font-size:13px; color:var(--ink-dim); margin-bottom:10px;" id="bulk-status">Starting…</div>
       <div class="bar-track" style="margin-bottom:16px;"><div class="bar-fill" id="bulk-bar" style="width:0%; background:var(--accent);"></div></div>`;
     const statusEl = stage.querySelector('#bulk-status');
@@ -4032,23 +4127,28 @@ async function openBulkImportModal(){
       try{ receiptData = await resizeImageFile(file, 1000, 0.55); }catch(err){}
       let catGuess = parsed.categoryGuess || null;
       if(!catGuess && parsed.note){ catGuess = await suggestCategoryFromHistory(parsed.note, 'expense'); }
+      const matchedAcct = parsed.bank ? accountForBank(parsed.bank.key) : null;
       const cand = {
         fileName: file.name || ('#' + (i+1)),
         amount: parsed.amount || null,
         date: parsed.date || null,
         note: parsed.note || '',
         categoryGuess: catGuess,
+        accountId: matchedAcct ? matchedAcct.id : state.accounts[0].id,
         receiptData,
         resolved:false,
         dup:false,
       };
-      const confident = cand.amount != null && cand.date != null;
-      cand.dup = confident && isLikelyDuplicate(cand, existingTxns, savedInBatch);
-      if(confident && !cand.dup){
-        await saveCandidate(cand, cand.amount, cand.date, cand.note, cand.categoryGuess || fallbackCat, state.accounts[0].id);
+      cand.dup = cand.amount != null && isLikelyDuplicate({date: cand.date || today, amount: cand.amount}, existingTxns, savedInBatch);
+      let autoSave;
+      if(vmode === 'always'){ autoSave = false; }
+      else if(vmode === 'auto'){ autoSave = cand.amount != null && !cand.dup; }
+      else { autoSave = cand.amount != null && cand.date != null && !cand.dup; }
+      if(autoSave){
+        await saveCandidate(cand, cand.amount, cand.date || today, cand.note, cand.categoryGuess || fallbackCat, cand.accountId);
         savedCount++;
       } else {
-        if(!cand.date) cand.date = ymd(new Date());
+        if(!cand.date) cand.date = today;
         reviewItems.push(cand);
       }
       barEl.style.width = ((i+1)/files.length*100) + '%';
@@ -4384,6 +4484,12 @@ function attachViewHandlers(){
       openPinSetupModal(!!hash);
     });
 
+    viewRoot.querySelectorAll('[data-slipmode]').forEach(el => {
+      el.addEventListener('click', async () => {
+        await dbPut('meta', {key:'slipVerifyMode', value:el.dataset.slipmode});
+        renderView();
+      });
+    });
     viewRoot.querySelectorAll('[data-thememode]').forEach(el => {
       el.addEventListener('click', async () => { await setThemeMode(el.dataset.thememode); renderView(); });
     });
