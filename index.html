@@ -970,7 +970,7 @@ select.field option, .select-native option{ background:var(--bg); color:var(--in
    ========================================================================= */
 
 /* ---------- tiny IndexedDB wrapper ---------- */
-const APP_BUILD = 43; // keep in sync with CACHE_NAME in service-worker.js
+const APP_BUILD = 44; // keep in sync with CACHE_NAME in service-worker.js
 const DB_NAME = 'ledgerDB';
 const DB_VERSION = 5;
 let dbPromise = null;
@@ -1747,6 +1747,29 @@ async function setThemeMode(mode){
 
 /* ---------- rendering: view switcher ---------- */
 const viewRoot = document.getElementById('view-root');
+
+/* The view scrolls inside #view-root, not the window, so Chrome keeps its
+   address bar shown the whole time. That makes the real visible area shorter
+   than the 100dvh the layout assumes, so the scroller runs off the bottom of
+   the screen and the last rows hide under the fixed tab bar. Measure how far
+   the scroller extends past the visible viewport, add the real tab bar height,
+   and pad the bottom by that so everything can scroll clear. */
+function syncBottomInset(){
+  const vr = document.getElementById('view-root');
+  const tb = document.querySelector('.tabbar');
+  if(!vr || !tb) return;
+  const vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+  const belowScreen = Math.max(0, vr.getBoundingClientRect().bottom - vh);
+  const barHeight = tb.getBoundingClientRect().height;
+  vr.style.paddingBottom = Math.round(belowScreen + barHeight + 24) + 'px';
+}
+window.addEventListener('resize', syncBottomInset);
+window.addEventListener('orientationchange', syncBottomInset);
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', syncBottomInset);
+  window.visualViewport.addEventListener('scroll', syncBottomInset);
+}
+
 const topbarTitle = document.getElementById('topbar-title');
 const topbarEyebrow = document.getElementById('topbar-eyebrow');
 document.getElementById('help-btn').addEventListener('click', () => openHelpSheet());
@@ -1879,6 +1902,7 @@ async function renderView(){
   else if(state.tab === 'settings') html = await renderSettings();
   viewRoot.innerHTML = `<div class="view-enter">${html}</div>`;
   attachViewHandlers();
+  syncBottomInset();
 }
 
 /* ---------- DASHBOARD ---------- */

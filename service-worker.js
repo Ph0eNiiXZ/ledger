@@ -7,7 +7,7 @@
 // The page itself uses network-first below, so most updates show up without
 // even needing a bump, but bumping is a safe belt-and-braces habit.
 
-const CACHE_NAME = 'halo-cache-v43';
+const CACHE_NAME = 'halo-cache-v44';
 // Cross-origin CDN libraries (Tesseract, jsQR) live in a stable cache so they
 // survive app version bumps and keep working offline right after an update.
 const VENDOR_CACHE = 'halo-vendor';
